@@ -9,6 +9,10 @@ module.exports = {
 // especially with arrangements
 function b(a){return a?(a^Math.random()*16>>a/4).toString(16):([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g,b)}
 
+// Simple English detection, assumes we never mix languages in same string
+// search for basic latin characters
+function isEng(t) { return t.search(/[\u0020-\u007F]/g) != -1 }
+
 const fs        = require('fs');
 const path      = require('path');
 const cheerio   = require('cheerio');
@@ -20,9 +24,10 @@ const GroupColors = {
   'C': '1 0 0 1',
   'B': '0.6000000238418579 0.4000000059604645 0.2000000029802322 1'
 }
+
 if (process.argv.length < 3) {
   return console.log("usage: node song2pro.js <template.pro5 file> <song.txt file>");
-} else if (process.argv[1] == 'song2pro.js') {
+} else if (process.argv[1].endsWith('song2pro.js')) {
   // Process song.txt file
   let templ = process.argv[2];
   // Generate ProPresenter.pro5 song file
@@ -108,17 +113,17 @@ function generatePro5(templ, songFile, outPath, ext = '') {
         let slideIdx = 0;
 
         song[prop].forEach((slideSet) => {
-          let lyrics;
-          let text;
+          let lyrics = '';
+          let text = '';
 
-          if (slideSet.length > 0)
-            lyrics = slideSet[0];
-          if (slideSet.length > 1)
-            text = slideSet[1];
-          if (slideSet.length > 2)
-            lyrics += ('\r\n' + slideSet[2]);
-          if (slideSet.length > 3)
-            text += ('\r\n' + slideSet[3]);
+          // Send English to lyrics section and
+          // Japanese to explanatory text section
+          slideSet.forEach((l) => {
+            if (isEng(l))
+              lyrics += (lyrics.length) ? '\r\n'+l : l;
+            else
+              text += (text.length) ? '\r\n' + l : l;
+          });
 
           let newSlide = makeSlide(enSlide, song.title, lyrics, text);
           newSlide.attr('serialization-array-index', slideIdx++);
